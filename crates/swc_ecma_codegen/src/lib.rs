@@ -688,7 +688,17 @@ where
 
         if !self.cfg.minify {
             if let Some(raw) = &node.raw {
-                if (!self.cfg.ascii_only || raw.is_ascii())
+                let es5_safe = match self.cfg.target {
+                    EsVersion::Es3 | EsVersion::Es5 => {
+                        // Block raw strings containing ES6+ Unicode escapes (\u{...}) for ES3/ES5
+                        // targets
+                        !raw.contains("\\u{")
+                    }
+                    _ => true,
+                };
+
+                if es5_safe
+                    && (!self.cfg.ascii_only || raw.is_ascii())
                     && (!self.cfg.inline_script || !node.raw.as_ref().unwrap().contains("script"))
                 {
                     self.wr.write_str_lit(DUMMY_SP, raw)?;
